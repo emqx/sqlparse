@@ -73,6 +73,8 @@ Nonterminals
  db_user_proxy
  delete_statement_positioned
  delete_statement_searched
+ do_clause
+ incase_clause
  drop_cluster_def
  drop_cluster_extensions
  drop_context_def
@@ -325,6 +327,7 @@ Terminals
  IF
  IMMEDIATE
  IN
+ INCASE
  INCLUDING
  INDEX
  INDICATOR
@@ -395,6 +398,8 @@ Terminals
  ROWID
  SCHEMA
  SELECT
+ FOREACH
+ DO
  SEQUENCE
  SET
  SOME
@@ -755,6 +760,7 @@ object_privilege -> INDEX      : 'index'.
 object_privilege -> INSERT     : 'insert'.
 object_privilege -> REFERENCES : 'references'.
 object_privilege -> SELECT     : 'select'.
+object_privilege -> FOREACH    : 'foreach'.
 object_privilege -> UPDATE     : 'update'.
 
 object_privilege_list -> object_privilege                           : ['$1'].
@@ -788,6 +794,7 @@ system_privilege -> DROP ANY TABLE               : 'drop any table'.
 system_privilege -> DROP ANY VIEW                : 'drop any view'.
 system_privilege -> INSERT ANY TABLE             : 'insert any table'.
 system_privilege -> SELECT ANY TABLE             : 'select any table'.
+system_privilege -> FOREACH ANY TABLE            : 'foreach any table'.
 system_privilege -> UPDATE ANY TABLE             : 'update any table'.
 system_privilege -> NAME                         : strl2atom(['$1']).
 
@@ -1082,6 +1089,15 @@ query_term ->     query_spec          : '$1'.
 query_term -> '(' query_exp  ')'      : '$2'.
 query_term -> '(' query_exp  ')' JSON : {'$2', jpparse(list_to_binary([unwrap('$4')])), '('}.
 
+%%%%% foreach
+query_spec -> FOREACH selection table_exp
+              : {foreach,[{fields, '$2'}] ++ '$3'}.
+query_spec -> FOREACH selection do_clause table_exp
+              : {foreach, [{fields, '$2'}, '$3'] ++ '$4'}.
+query_spec -> FOREACH selection do_clause incase_clause table_exp
+              : {foreach, [{fields, '$2'}, '$3', '$4'] ++'$5'}.
+query_spec -> FOREACH selection incase_clause table_exp
+              : {foreach, [{fields, '$2'}, '$3'] ++'$4'}.
 query_spec -> SELECT                   selection      table_exp : {select,
                                                                    [{fields, '$2'}] ++
                                                                    '$3'}.
@@ -1118,6 +1134,7 @@ query_spec -> SELECT hint all_distinct selection into table_exp : {select,
                                                                    [{fields, '$4'}] ++
                                                                    if '$5' == {} -> []; true -> [{into, '$5'}] end ++
                                                                    '$6'}.
+do_clause -> DO selection: {'do', '$2'}.
 
 into -> INTO target_commalist : '$2'.
 
@@ -1250,6 +1267,7 @@ hierarchical_query_clause -> CONNECT BY nocycle search_condition START WITH     
 
 nocycle -> NOCYCLE : <<"nocycle">>.
 
+incase_clause -> INCASE search_condition : {incase, '$2'}.
 where_clause -> WHERE search_condition : {where, '$2'}.
 
 group_by_clause -> GROUP BY column_ref_commalist : {'group by', '$3'}.

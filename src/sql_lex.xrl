@@ -95,6 +95,7 @@ Erlang code.
 -export([reserved_keywords/0]).
 
 -define(NODEBUG, true).
+
 -include("sql_lex.hrl").
 
 reserved_keywords() -> [T || {_, T} <- ?KEYWORDS].

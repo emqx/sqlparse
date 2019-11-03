@@ -31,7 +31,6 @@ Header "%% Copyright (C) K2 Informatics GmbH"
 Nonterminals
  all_distinct
  all_or_any_predicate
- alter_user_def
  any_all_some
  asc_desc
  assignment
@@ -66,7 +65,6 @@ Nonterminals
  create_opts
  create_role_def
  create_table_def
- create_user_def
  cursor
  cursor_def
  data_type
@@ -98,7 +96,6 @@ Nonterminals
  drop_trigger_def
  drop_type_def
  drop_type_body_def
- drop_user_def
  drop_view_def
  else
  escape
@@ -229,7 +226,6 @@ Nonterminals
  unary_add_or_subtract
  update_statement_positioned
  update_statement_searched
- user_list
  user_opt
  user_opts_list
  user_role
@@ -424,8 +420,6 @@ Terminals
  UNLIMITED
  UPDATE
  UROWID
- USER
- USERS
  USING
  VALIDATE
  VALUES
@@ -538,9 +532,6 @@ create_table_def -> CREATE             TABLE table '(' base_table_element_commal
 create_table_def -> CREATE create_opts TABLE table '('                              ')' : {'create table', '$4', [],   '$2'}.
 create_table_def -> CREATE create_opts TABLE table '(' base_table_element_commalist ')' : {'create table', '$4', '$6', '$2'}.
 
-create_user_def -> CREATE USER identifier identified                : {'create user', '$3', '$4', []}.
-create_user_def -> CREATE USER identifier identified user_opts_list : {'create user', '$3', '$4', '$5'}.
-
 create_index_def -> CREATE                   INDEX            ON table_alias                                                         : {'create index', {},   {},   '$4', [],   {},   {}}.
 create_index_def -> CREATE                   INDEX            ON table_alias                                     create_index_filter : {'create index', {},   {},   '$4', [],   {},   '$5'}.
 create_index_def -> CREATE                   INDEX            ON table_alias                   create_index_norm                     : {'create index', {},   {},   '$4', [],   '$5', {}}.
@@ -607,23 +598,7 @@ tbl_type -> ORDERED_SET : [{type, <<"ordered_set">>}].
 tbl_type -> BAG         : [{type, <<"bag">>}].
 tbl_type -> NAME        : [{type, unwrap_bin('$1')}].
 
-alter_user_def -> ALTER USER user_list  proxy_clause      : {'alter user', '$3', '$4'}.
-alter_user_def -> ALTER USER identifier spec_list         : {'alter user', '$3', {spec, '$4'}}.
-alter_user_def -> ALTER USER identifier NAME         NAME : {'alter user', '$3', {spec, [case {string:to_lower(unwrap('$4')), string:to_lower(unwrap('$5'))} of
-                                                                                             {"account", "lock"} -> {account, lock};
-                                                                                             {"account", "unlock"} -> {account, unlock};
-                                                                                             {"password", "expire"} -> {password, expire};
-                                                                                             Unknown -> exit({invalid_option, Unknown})
-                                                                                         end]
-                                                                                     }
-                                                            }.
-
-user_list -> identifier               : ['$1'].
-user_list -> identifier ',' user_list : ['$1' | '$3'].
-
-proxy_clause -> GRANT  CONNECT THROUGH ENTERPRISE USERS : {'grant connect', 'enterprise users'}.
 proxy_clause -> GRANT  CONNECT THROUGH db_user_proxy    : {'grant connect', '$4'}.
-proxy_clause -> REVOKE CONNECT THROUGH ENTERPRISE USERS : {'revoke connect', 'enterprise users'}.
 proxy_clause -> REVOKE CONNECT THROUGH db_user_proxy    : {'revoke connect', '$4'}.
 
 db_user_proxy -> proxy_with                : '$1'.
@@ -696,7 +671,6 @@ column_def_opt -> DEFAULT function_ref                      : {default, '$2'}.
 column_def_opt -> DEFAULT identifier                        : {default, '$2'}.
 column_def_opt -> DEFAULT literal                           : {default, '$2'}.
 column_def_opt -> DEFAULT NULLX                             : {default, 'null'}.
-column_def_opt -> DEFAULT USER                              : {default, 'user'}.
 column_def_opt -> CHECK '(' search_condition ')'            : {check, '$3'}.
 column_def_opt -> REFERENCES table                          : {ref, '$2'}.
 column_def_opt -> REFERENCES table '(' column_commalist ')' : {ref, {'$2', '$4'}}.
@@ -825,11 +799,9 @@ asc_desc -> DESC : <<"desc">>.
 %% manipulative statements
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-manipulative_statement -> alter_user_def              : '$1'.
 manipulative_statement -> create_index_def            : '$1'.
 manipulative_statement -> create_role_def             : '$1'.
 manipulative_statement -> create_table_def            : '$1'.
-manipulative_statement -> create_user_def             : '$1'.
 manipulative_statement -> delete_statement_positioned : '$1'.
 manipulative_statement -> delete_statement_searched   : '$1'.
 manipulative_statement -> drop_cluster_def            : '$1'.
@@ -851,7 +823,6 @@ manipulative_statement -> drop_tablespace_def         : '$1'.
 manipulative_statement -> drop_trigger_def            : '$1'.
 manipulative_statement -> drop_type_def               : '$1'.
 manipulative_statement -> drop_type_body_def          : '$1'.
-manipulative_statement -> drop_user_def               : '$1'.
 manipulative_statement -> drop_view_def               : '$1'.
 manipulative_statement -> grant_def                   : '$1'.
 manipulative_statement -> insert_statement            : '$1'.
@@ -997,9 +968,6 @@ type_name ->                identifier : '$1'.
 type_name -> identifier '.' identifier : list_to_binary(['$1',".",'$3']).
 
 drop_type_body_def -> DROP TYPE BODY type_name : {'drop type body', '$4'}.
-
-drop_user_def -> DROP USER identifier         : {'drop user', '$3', []}.
-drop_user_def -> DROP USER identifier CASCADE : {'drop user', '$3', ['cascade']}.
 
 drop_view_def -> DROP VIEW table                     : {'drop view', '$3', {}}.
 drop_view_def -> DROP VIEW table CASCADE CONSTRAINTS : {'drop view', '$3', 'cascade constraints'}.
@@ -1391,7 +1359,6 @@ scalar_exp_commalist -> scalar_exp_commalist ',' scalar_opt_as_exp : '$1' ++ ['$
 
 atom -> parameter_ref : '$1'.
 atom -> literal       : '$1'.
-atom -> USER          : <<"user">>.
 
 parameter_ref -> parameter                     : '$1'.
 parameter_ref -> parameter           parameter : {'$1', '$2'}.
@@ -1713,8 +1680,6 @@ identifier -> TYPE            : unwrap_bin('$1').
 identifier -> UNLIMITED       : unwrap_bin('$1').
 % identifier -> UPDATE          : unwrap_bin('$1').    Oracle reserved
 identifier -> UROWID          : unwrap_bin('$1').
-% identifier -> USER            : unwrap_bin('$1').    reduce/reduce problem
-identifier -> USERS           : unwrap_bin('$1').
 identifier -> USING           : unwrap_bin('$1').
 identifier -> VALIDATE        : unwrap_bin('$1').
 % identifier -> VALUES          : unwrap_bin('$1').    Oracle reserved
